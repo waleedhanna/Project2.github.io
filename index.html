@@ -1,0 +1,239 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="description" content="">
+    <title>Life Expectancy vs. GDP vs. Population</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/jquery-ui.min.css">
+    <link rel="stylesheet" href="css/jquery-ui.structure.min.css">
+    <link rel="stylesheet" href="css/jquery-ui.theme.min.css">
+    <link rel="stylesheet" href="css/d3-tip.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+        <body id="page-top">
+
+                <nav id="mainNav" class="navbar navbar-default navbar-fixed-top">
+                    <div class="container-fluid">
+                        <!-- Brand and toggle get grouped for better mobile display -->
+                        <div class="navbar-header">
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                            <a class="navbar-brand page-scroll" href="#page-top">Waleed, Kush, Tyler Rutgers Unversity :  Data Analytics & Visualization :</a>
+                        </div>
+            
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                            <ul class="nav navbar-nav navbar-right">
+        
+                            <li>
+                                <a class ="page-scroll" href="https://github.com/waleedhanna/Project2.github.io.git"target="_blank">GitRepo</a>
+                            </li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+    <div class="container">
+        <div class="row">
+            <div class="test1">
+                <button id="play-button" class="btn btn-primary">Play</button>
+                <button id="reset-button" class="btn btn-primary">Reset</button>
+                <div id="slider-div">
+                    <label>Year: <span id="year">1952</span></label>
+                    <div id="date-slider"></div>
+                </div>
+            </div>
+            <div class="test1">
+                <select id="continent-select" class="form-control">
+                    <option selected value="all">All</option>
+                    <option value="europe">Europe</option>
+                    <option value="asia">Asia</option>
+                    <option value="americas">Americas</option>
+                    <option value="africa">Africa</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="test2">
+                <div id="chart-area"></div>                 
+            </div> 
+        </div>
+    </div>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/jquery-ui.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/d3.min.js"></script>
+<script src="js/d3-tip.js"></script>
+<script> 
+var margin = { left:75, right:10, top:40, bottom:90 };
+var height = 520 - margin.top - margin.bottom, 
+    width = 815 - margin.left - margin.right;
+
+var g = d3.select("#chart-area").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g")
+        .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
+
+var time = 0;
+var interval;
+var formattedData;
+
+// Tooltip
+var tip = d3.tip().attr('class', 'd3-tip')
+    .html(function(d) {
+        var text = "<strong>Country:</strong> <span style='color:orange'>" + d.country + "</span><br>";
+        text += "<strong>GDP Per Capita:</strong> <span style='color:orange'>" + d3.format("$,.0f")(d.income) + "</span><br>";
+        text += "<strong>Life Expectancy:</strong> <span style='color:orange'>" + d3.format(".2f")(d.life_exp) + "</span><br>";
+        text += "<strong>Population:</strong> <span style='color:orange'>" + d3.format(",.0f")(d.population) + "</span><br>";
+        text += "<strong>Continent:</strong> <span style='color:orange;text-transform:capitalize'>" + d.continent + "</span><br>";
+        return text;
+    });
+g.call(tip);
+
+// Scales
+var x = d3.scaleLog().base(10).range([0, width]).domain([50, 170000]);
+var y = d3.scaleLinear().range([height, 0]).domain([10, 90]);
+var area = d3.scaleLinear().range([25*Math.PI, 1500*Math.PI]).domain([2000, 1400000000]);
+var continentColor = d3.scaleOrdinal(d3.schemeDark2);
+
+// Labels
+var xLabel = g.append("text").attr("y", height + 50).attr("x", width / 2).attr("font-size", "15px").attr("text-anchor", "middle").text("GDP Per Capita (USD)");
+var yLabel = g.append("text").attr("transform", "rotate(-90)").attr("y", -40).attr("x", -170).attr("font-size", "15px").attr("text-anchor", "middle").text("Life Expectancy (years)")
+var timeLabel = g.append("text").attr("y", height -400).attr("x", width - 350).attr("font-size", "25px").attr("opacity", "0.6").attr("text-anchor", "middle").text("1952");
+
+// X Axis
+var xAxisCall = d3.axisBottom(x).tickValues([100,500, 1000, 2500, 5000, 10000, 25000, 50000, 100000]).tickFormat(d3.format("$"));
+g.append("g").attr("class", "x axis").attr("transform", "translate(0," + height +")").call(xAxisCall);
+
+// Y Axis
+var yAxisCall = d3.axisLeft(y).tickFormat(function(d){ return +d; });
+g.append("g").attr("class", "y axis").call(yAxisCall);
+
+var continents = ["europe", "asia", "americas", "africa"];
+
+var legend = g.append("g").attr("transform", "translate(" + (width - 10) + "," + (height - 125) + ")");
+
+continents.forEach(function(continent, i){
+    var legendRow = legend.append("g")
+        .attr("transform", "translate(0, " + (i * 15) + ")");
+
+    legendRow.append("rect")
+        .attr("width", 10)
+        .attr("height", 10)
+        .attr("fill", continentColor(continent));
+
+    legendRow.append("text")
+        .attr("x", -4)
+        .attr("y", 10)
+        .attr("text-anchor", "end")
+        .style("text-transform", "capitalize")
+        .text(continent);
+});
+
+d3.json("data/gapminder.json").then(function(data){
+
+    // Clean data
+    formattedData = data.map(function(year){
+        return year["countries"].filter(function(country){
+            var dataExists = (country.income && country.life_exp);
+            return dataExists
+        }).map(function(country){
+            country.income = +country.income;
+            country.life_exp = +country.life_exp;
+            return country;            
+        })
+    });
+
+    // First run of the visualization
+    update(formattedData[0]);
+
+})
+
+$("#play-button")
+    .on("click", function(){
+        var button = $(this);
+        if (button.text() == "Play"){
+            button.text("Pause");
+            interval = setInterval(step, 200);            
+        }
+        else {
+            button.text("Play");
+            clearInterval(interval);
+        }
+    })
+
+$("#reset-button")
+    .on("click", function(){
+        time = 0;
+        update(formattedData[0]);
+    })
+
+$("#continent-select")
+    .on("change", function(){
+        update(formattedData[time]);
+    })
+
+$("#date-slider").slider({
+    max: 2014,
+    min: 1952,
+    step: 1,
+    slide: function(event, ui){
+        time = ui.value - 1952;
+        update(formattedData[time]);
+    }
+})
+
+function step(){
+    time = (time < 214) ? time+1 : 0
+    update(formattedData[time]);
+}
+
+function update(data) {
+    var t = d3.transition()
+        .duration(100);
+
+    var continent = $("#continent-select").val();
+
+    var data = data.filter(function(d){
+        if (continent == "all") { return true; }
+        else {
+            return d.continent == continent;
+        }
+    })
+
+    var circles = g.selectAll("circle").data(data, function(d){
+        return d.country;
+    });
+
+    circles.exit()
+        .attr("class", "exit")
+        .remove();
+
+    circles.enter()
+        .append("circle")
+        .attr("class", "enter")
+        .attr("fill", function(d) { return continentColor(d.continent); })
+        .style("stroke", "black")
+        .on("mouseover", tip.show)
+        .on("mouseout", tip.hide)
+        .merge(circles)
+        .transition(t)
+            .attr("cy", function(d){ return y(d.life_exp); })
+            .attr("cx", function(d){ return x(d.income) })
+            .attr("r", function(d){ return Math.sqrt(area(d.population) / Math.PI) });
+
+    timeLabel.text(+(time + 1952))
+    $("#year")[0].innerHTML = +(time + 1952)
+
+    $("#date-slider").slider("value", +(time + 1952)).fill('#2196f3')
+}
+</script>
+</body>
+</html>
